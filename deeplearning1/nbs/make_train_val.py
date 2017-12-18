@@ -1,6 +1,6 @@
 import os, sys
 import shutil
-from Counter import defaultdict
+from collections import defaultdict
 
 def make_dirs(path, classes):
     '''
