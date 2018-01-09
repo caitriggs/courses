@@ -13,7 +13,7 @@ def make_dirs(path, classes, sample=''):
     path (str): the absolute path to your parent data folder in which you want to make new subdirs
     classes (list): the names of the image classes (e.g. ['dog', 'cat'])
     sample (str): By default creates the regular train and valid directories. 
-        Use sample='sample' to create sample directories
+        Use sample='sample/' to create sample directories
     '''
     # make class subdirs if they don't already exist
     # relative path didn't work here, so use os.getcwd() and prepend to path --> path = os.getcwd() + '/path/to/data/'
@@ -24,6 +24,11 @@ def make_dirs(path, classes, sample=''):
             os.makedirs(t_cls_dir)
         if not os.path.exists(v_cls_dir):
             os.makedirs(v_cls_dir)
+    # create a sub test directory for the sample directory
+    if sample == 'sample/':
+        test_cls_dir = os.path.dirname(path + sample + '/test/test_sub/')
+        if not os.path.exists(test_cls_dir):
+            os.makedirs(test_cls_dir)
     return None
 
 
@@ -63,6 +68,7 @@ def find_split(file_list, train_split):
         this index marks the beginning of the validation set that will be moved out of train
     '''
     return int(len(file_list) * train_split)
+
 
 '''
         Create Train and Valid Directories: move all class subdirectories of appropriate split to new valid directory
@@ -131,7 +137,7 @@ def copy_test_imgs(path):
 
     for _, f in enumerate(shuffled):
         f_name = '/'.join(f.split('/')[-1:])
-        shutil.copyfile(f, path + 'sample/test/' + f_name)
+        shutil.copyfile(f, path + 'sample/test/test_sub/' + f_name)
     return None
 
 
@@ -149,7 +155,7 @@ def create_sample_dirs(path, classes):
     # Get number of files already in sample directories if any
     class_dict, file_sum = count_files(path, classes, sample='sample/')
 
-    # If sample direcotry doesn't already have files in it, ccreate copies of files for train, valid and test directories
+    # If sample direcotry doesn't already have files in it, create copies of files for train, valid and test directories
     if file_sum == 0:
         # Copy a random sample of 1500 images from train to sample train
         copy_train_imgs(path)
