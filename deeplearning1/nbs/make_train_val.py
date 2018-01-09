@@ -4,12 +4,19 @@ from collections import defaultdict
 from glob import glob
 
 
+'''
+Supporting functions for creating, moving, and copying files in directories
+'''
+
 def make_dirs(path, classes, sample=''):
     '''
     path (str): the absolute path to your parent data folder in which you want to make new subdirs
     classes (list): the names of the image classes (e.g. ['dog', 'cat'])
+    sample (str): By default creates the regular train and valid directories. 
+        Use sample='sample' to create sample directories
     '''
-    # make class subdirs if they don't already exist (relative path didn't work here, so added os.getcwd())
+    # make class subdirs if they don't already exist
+    # relative path didn't work here, so use os.getcwd() and prepend to path --> path = os.getcwd() + '/path/to/data/'
     for clas in classes: 
         t_cls_dir = os.path.dirname(path + sample + '/train/' + clas + '/')
         v_cls_dir = os.path.dirname(path + sample + '/valid/' + clas + '/')
@@ -25,6 +32,7 @@ def count_files(path, classes, sample='', train='train/'):
     path (str): the absolute path to your parent data folder in which you want to make new subdirs
     classes (list): the names of the image classes (e.g. ['dog', 'cat'])
     sample (str): by default looks in the regular train directory to count the # of files in the train directory
+        Use sample='sample' to count in sample directories
     train (str): by default looks in the regular train directory. Change to 'valid/' to count # of files in valid directory
     '''
     # Find number of files already in the train directory
@@ -56,61 +64,28 @@ def find_split(file_list, train_split):
     '''
     return int(len(file_list) * train_split)
 
-
-def create_sample_dirs(path, classes):
-    '''
-    path (str): the absolute path to your parent data folder in which you want to make new subdirs
-    classes (list): the names of the image classes (e.g. ['dog', 'cat'])
-    '''
-    # just make sure there's a trailing slash so things concat nicely
-    path = add_trailing_slash(path)
-
-    # Create sample subdirectories
-    make_dirs(path, classes, sample='sample/')
-    # Training image directory path
-    train_path = path + 'train/'
-
-    # Get number of files already in sample directories if any
-    class_dict, file_sum = count_files(path, classes, sample='sample/')
-
-    if file_sum == 0:
-        g = glob(train_path + 'c?/*.jpg')
-        
-        # Copy a random sample of images for train
-        shuffled = np.random.permutation(g)[:1500]
-        for _, f in enumerate(shuffled):
-            f_name = '/'.join(f.split('/')[-2:])
-            shutil.copyfile(f, path + 'sample/train/' + f_name)
-
-        # Copy a random sample of images for validation
-        shuffled = np.random.permutation(g)[:1000]
-        for _, f in enumerate(shuffled):
-            f_name = '/'.join(f.split('/')[-2:])
-            shutil.copyfile(f, path + 'sample/valid/' + f_name)
-        print("Samples directories created with copies of files for train and validation")
-    else:
-        print("Sample directories already contain files")
-
+'''
+        Create Train and Valid Directories: move all class subdirectories of appropriate split to new valid directory
+'''
 
 def create_train_val_dirs(path, classes, train_split=0.80):
     '''
     path (str): the absolute path to your parent data folder in which you want to make new subdirs
     classes (list): the names of the image classes (e.g. ['dog', 'cat'])
+    train_split (float): the percentage (0-1.0) of the training set that will be used to calculate how many images
+        will be in the new training set (validation size will be 1 - train_split)
     '''
     # just make sure there's a trailing slash so things concat nicely
     path = add_trailing_slash(path)
 
     # Create sample subdirectories
     make_dirs(path, classes)
-    # Training image directory path
-    train_path = path + 'train/'
 
     # Get number of files already in valid directories if any
     class_dict, file_sum = count_files(path, classes, train='valid/')
 
     if file_sum == 0:
-        g = glob(train_path + 'c?/*.jpg')
-        
+        g = glob(path + 'train/' + 'c?/*.jpg')
         # Find index split 
         index = find_split(g, train_split)
         # Move a random sample of images from train to valid
@@ -122,6 +97,69 @@ def create_train_val_dirs(path, classes, train_split=0.80):
             Train size: {}\nValidation size: {}".format(train_split, 1-train_split))
     else:
         print("Validation directories already contain files")
+
+'''
+        Create Sample Directory: copy images to new train, valid and test subdirectories
+'''
+
+def copy_train_imgs(path):
+    # Copy a random sample of 1500 images from train to sample train
+    g = glob(path + 'train/' + 'c?/*.jpg')
+    shuffled = np.random.permutation(g)[:1500]
+
+    for _, f in enumerate(shuffled):
+        f_name = '/'.join(f.split('/')[-2:])
+        shutil.copyfile(f, path + 'sample/train/' + f_name)
+    return None
+
+
+def copy_valid_imgs(path):
+    # Copy a random sample of 1000 images from validation to sample valid
+    g = glob(path + 'valid/' + 'c?/*.jpg')
+    shuffled = np.random.permutation(g)[:1000]
+
+    for _, f in enumerate(shuffled):
+        f_name = '/'.join(f.split('/')[-2:])
+        shutil.copyfile(f, path + 'sample/valid/' + f_name)
+    return None
+
+
+def copy_test_imgs(path):
+    # Copy a random sample of 1000 images from test to sample test
+    g = glob(path + 'test/test_sub/' + '*.jpg')
+    shuffled = np.random.permutation(g)[:1000]
+
+    for _, f in enumerate(shuffled):
+        f_name = '/'.join(f.split('/')[-1:])
+        shutil.copyfile(f, path + 'sample/test/' + f_name)
+    return None
+
+
+def create_sample_dirs(path, classes):
+    '''
+    path (str): the absolute path to your parent data folder in which you want to make new subdirs
+    classes (list): the names of the image classes (e.g. ['dog', 'cat'])
+    '''
+    # just make sure there's a trailing slash so things concat nicely
+    path = add_trailing_slash(path)
+
+    # Create sample subdirectories
+    make_dirs(path, classes, sample='sample/')
+
+    # Get number of files already in sample directories if any
+    class_dict, file_sum = count_files(path, classes, sample='sample/')
+
+    # If sample direcotry doesn't already have files in it, ccreate copies of files for train, valid and test directories
+    if file_sum == 0:
+        # Copy a random sample of 1500 images from train to sample train
+        copy_train_imgs(path)
+        # Copy a random sample of 1000 images from validation to sample valid
+        copy_valid_imgs(path)
+        # Copy a random sample of 1000 images from test to sample test
+        copy_test_imgs(path)
+        print("Samples directories created with copies of files for train and validation\nSample test directory created")
+    else:
+        print("Sample directories already contain files")
 
 
 if __name__ == '__main__':
